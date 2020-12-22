@@ -20,7 +20,6 @@ public class MongoDBConnector extends BaseDBConnector {
         super(mongoURI);
         client = new MongoClient(new MongoClientURI(uri));
         MongoCredential.createCredential(dbUsername, dbName, dbPassword.toCharArray());
-        System.out.println("Connected to the database successfully");
         db = client.getDatabase(dbName);
         collection = db.getCollection(collectionName);
     }
@@ -50,6 +49,6 @@ public class MongoDBConnector extends BaseDBConnector {
     public void addUser(String username, String password) {
         Document document = new Document(USERNAME_FIELD, username).append(PASSWORD_FIELD, password);
         collection.insertOne(document);
-        System.out.println("Document inserted successfully");
+        System.out.println(document.toString());
     }
 }

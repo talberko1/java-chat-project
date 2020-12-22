@@ -1,10 +1,12 @@
 package com.github.server;
 
 import com.github.server.protocol.ChatAPI;
+import com.github.server.protocol.ChatFlags;
 import com.github.server.protocol.ChatPacket;
 import com.github.server.protocol.base.ChatCommand;
 import com.github.server.protocol.base.ChatHeader;
 import com.github.server.protocol.headers.*;
+import com.google.gson.JsonObject;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.IOException;
@@ -56,30 +58,44 @@ public class ChatServer extends BaseServer implements IRequestHandler {
 
     //Synchronized!!!
     public void handleRequest(UserThread user, ChatPacket request) {
-        System.out.println("request: " + request);
-        ChatHeader header = request.getHeader();
-        ChatCommand command = header.getCommand();
+        System.out.println(request.toString());
+        JsonObject headers = request.getHeaders();
+        ChatCommand command = request.getCommand();
         String data = request.getData();
+        if (command == ChatCommand.REGISTER || command == ChatCommand.LOGIN) {
+            String[] args = data.split(SPACE);
+            String username = args[0];
+            String password = args[1];
+            if (command == ChatCommand.REGISTER) {
+                handleRegister(user, username, password);
+            } else {
+                handleLogin(user, username, password);
+            }
+        } else if (command == ChatCommand.LOGOUT) {
+            handleLogout(user);
+        } else if (command == ChatCommand.UNICAST) {
+            handleUnicast(user, )
+        } else if (command == ChatCommand.MULTICAST) {
+            handleMulticast(user, );
+        }
         switch (command) {
             case REGISTER:
-                RegisterHeader registerHeader = (RegisterHeader) header;
-                handleRegister(user, registerHeader.getUsername(), registerHeader.getPassword());
+                handleRegister(user, request);
                 break;
             case LOGIN:
-                LoginHeader loginHeader = (LoginHeader) header;
-                handleLogin(user, loginHeader.getUsername(), loginHeader.getPassword());
+                handleLogin(user, request);
                 break;
             case LOGOUT:
-                handleLogout(user);
+                handleLogout(user, request);
                 break;
             case UNICAST:
-                handleUnicast(user, (UnicastHeader) header, data);
+                handleUnicast(user, request);
                 break;
             case MULTICAST:
-                handleMulticast(user, (MulticastHeader) header, data);
+                handleMulticast(user, request);
                 break;
             case BROADCAST:
-                handleBroadcast(user, (BroadcastHeader) header, data);
+                handleBroadcast(user, request);
                 break;
             default:
                 respond(user, new ResponseHeader(ChatCommand.UNKNOWN, FAILURE_STATUS), UNKNOWN_COMMAND_RESPONSE);
@@ -87,10 +103,15 @@ public class ChatServer extends BaseServer implements IRequestHandler {
         }
     }
 
-    public void handleRegister(UserThread user, String username, String password) {
+    public void handleRegister(UserThread user, ChatPacket request) {
+        String data = request.getData();
+        String[] arguments = data.split(SPACE);
+        String username = arguments[0];
+        String password = arguments[1];
         if (!userDBConnector.containsUser(username)) {
             userDBConnector.addUser(username, DigestUtils.sha256Hex(password));
             onlineUsers.put(user, username);
+            respond(user, new ChatPacket(ChatCommand.REGISTER, (byte) (ChatFlags.REPLY | ChatFlags.REGISTER), new JsonObject(), ""))
             respond(user, new ResponseHeader(ChatCommand.REGISTER, SUCCESS_STATUS), REGISTER_SUCCESS_MESSAGE);
             handleBroadcast(user, new BroadcastHeader(username, ChatAPI.CONTENT_TEXT), username + USER_JOINED);
         } else {
@@ -98,11 +119,15 @@ public class ChatServer extends BaseServer implements IRequestHandler {
         }
     }
 
-    public void handleLogin(UserThread user, String username, String password) {
+    public void handleLogin(UserThread user, ChatPacket request) {
+        String data = request.getData();
+        String[] arguments = data.split(SPACE);
+        String username = arguments[0];
+        String password = arguments[1];
         if (userDBConnector.containsUser(username)) {
             if (userDBConnector.passwordMatches(username, DigestUtils.sha256Hex(password))) {
                 onlineUsers.put(user, username);
-                respond(user, new ResponseHeader(ChatCommand.LOGIN, SUCCESS_STATUS), LOGIN_SUCCESS_MESSAGE);
+                respond(user, new ChatPacket(ChatCommand.LOGIN, SUCCESS_STATUS), LOGIN_SUCCESS_MESSAGE);
                 handleBroadcast(user, new BroadcastHeader(username, ChatAPI.CONTENT_TEXT), username + USER_JOINED);
             } else {
                 respond(user, new ResponseHeader(ChatCommand.LOGIN, FAILURE_STATUS), INCORRECT_PASSWORD_MESSAGE);
@@ -174,7 +199,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
         }
     }
 
-    public void respond(UserThread user, ChatHeader header, String data) {
-        user.getApi().send(new ChatPacket(header, data));
+    public void respond(UserThread user, byte flags, JsonObject headers, String data) {
+        user.getApi().send(new ChatPacket(flags, headers, data));
     }
 }

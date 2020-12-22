@@ -5,13 +5,22 @@ import com.github.server.protocol.ChatPacket;
 import com.github.server.protocol.base.ChatHeader;
 import com.github.server.protocol.base.ChatMessageHeader;
 import com.github.server.protocol.headers.*;
+import com.google.gson.
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import java.io.*;
 import java.net.Socket;
 
 public class UserThread extends Thread {
-    private static final Gson gson = new Gson();
+    private static final Gson gson = new GsonBuilder().registerTypeAdapterFactory(
+            RuntimeTypeAdapterFactory.of(ChatHeader.class, "command")
+                    .registerSubtype(RegisterHeader)
+                    .registerSubtype(LoginHeader)
+                    .registerSubtype(LogoutHeader)
+                    .registerSubtype(UnicastHeader)
+                    .registerSubtype(MulticastHeader)
+                    .registerSubtype((BroadcastHeader))).create();
     private final IRequestHandler requestHandler;
     private final ChatAPI api;
 

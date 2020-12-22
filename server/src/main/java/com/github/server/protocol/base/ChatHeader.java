@@ -10,4 +10,9 @@ public abstract class ChatHeader {
     public ChatCommand getCommand() {
         return this.command;
     }
+
+    @Override
+    public String toString() {
+        return command.name();
+    }
 }
