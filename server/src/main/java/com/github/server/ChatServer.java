@@ -1,10 +1,7 @@
 package com.github.server;
 
 import com.github.server.protocol.ChatAPI;
-import com.github.server.protocol.ChatFlags;
 import com.github.server.protocol.ChatPacket;
-import com.github.server.protocol.base.ChatCommand;
-import com.github.server.protocol.base.ChatHeader;
 import com.github.server.protocol.headers.*;
 import com.google.gson.JsonObject;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -62,22 +59,6 @@ public class ChatServer extends BaseServer implements IRequestHandler {
         JsonObject headers = request.getHeaders();
         ChatCommand command = request.getCommand();
         String data = request.getData();
-        if (command == ChatCommand.REGISTER || command == ChatCommand.LOGIN) {
-            String[] args = data.split(SPACE);
-            String username = args[0];
-            String password = args[1];
-            if (command == ChatCommand.REGISTER) {
-                handleRegister(user, username, password);
-            } else {
-                handleLogin(user, username, password);
-            }
-        } else if (command == ChatCommand.LOGOUT) {
-            handleLogout(user);
-        } else if (command == ChatCommand.UNICAST) {
-            handleUnicast(user, )
-        } else if (command == ChatCommand.MULTICAST) {
-            handleMulticast(user, );
-        }
         switch (command) {
             case REGISTER:
                 handleRegister(user, request);

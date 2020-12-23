@@ -1,8 +1,5 @@
 package com.github.server.protocol;
 
-import com.github.server.protocol.base.ChatHeader;
-import com.github.server.protocol.base.ChatMessageHeader;
-import com.github.server.protocol.headers.*;
 import com.google.gson.Gson;
 
 import java.io.*;

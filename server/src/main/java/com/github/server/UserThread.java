@@ -2,10 +2,6 @@ package com.github.server;
 
 import com.github.server.protocol.ChatAPI;
 import com.github.server.protocol.ChatPacket;
-import com.github.server.protocol.base.ChatHeader;
-import com.github.server.protocol.base.ChatMessageHeader;
-import com.github.server.protocol.headers.*;
-import com.google.gson.
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
