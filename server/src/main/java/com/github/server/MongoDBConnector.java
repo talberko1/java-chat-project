@@ -1,5 +1,6 @@
 package com.github.server;
 
+import com.github.server.base.BaseDBConnector;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
 import com.mongodb.MongoCredential;

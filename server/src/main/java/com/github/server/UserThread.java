@@ -1,28 +1,23 @@
 package com.github.server;
 
-import com.github.server.protocol.ChatAPI;
 import com.github.server.protocol.ChatPacket;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 import java.io.*;
 import java.net.Socket;
 
 public class UserThread extends Thread {
-    private static final Gson gson = new GsonBuilder().registerTypeAdapterFactory(
-            RuntimeTypeAdapterFactory.of(ChatHeader.class, "command")
-                    .registerSubtype(RegisterHeader)
-                    .registerSubtype(LoginHeader)
-                    .registerSubtype(LogoutHeader)
-                    .registerSubtype(UnicastHeader)
-                    .registerSubtype(MulticastHeader)
-                    .registerSubtype((BroadcastHeader))).create();
+    private static final Gson gson = new Gson();
     private final IRequestHandler requestHandler;
-    private final ChatAPI api;
+    private final Socket socket;
+    private final BufferedReader in;
+    private final PrintWriter out;
 
-    public UserThread(IRequestHandler requestHandlerInterface, Socket client) throws IOException {
+    public UserThread(IRequestHandler requestHandlerInterface, Socket socket) throws IOException {
         requestHandler = requestHandlerInterface;
-        api = new ChatAPI(client);
+        this.socket = socket;
+        this.in = new BufferedReader(new InputStreamReader(new DataInputStream(socket.getInputStream())));
+        this.out = new PrintWriter(new OutputStreamWriter(new DataOutputStream(socket.getOutputStream())));
     }
 
     @Override
@@ -37,15 +32,23 @@ public class UserThread extends Thread {
     }
 
     public void disconnect() {
-        api.disconnect();
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public ChatPacket receive() throws IOException {
-        return api.receive();
+        String request = in.readLine();
+        System.out.println(request);
+        return gson.fromJson(request, ChatPacket.class);
     }
 
-    public ChatAPI getApi() {
-        return api;
+    public void send(ChatPacket packet) {
+        String request = gson.toJson(packet);
+        out.println(request);
+        out.flush();
     }
 
 }

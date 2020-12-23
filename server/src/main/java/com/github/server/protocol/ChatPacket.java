@@ -3,22 +3,16 @@ package com.github.server.protocol;
 import com.google.gson.JsonObject;
 
 public class ChatPacket {
-    private final byte flags;
-    private final JsonObject headers;
+    private final JsonObject header;
     private final JsonObject payload;
 
-    public ChatPacket(byte flags, JsonObject headers, JsonObject payload) {
-        this.flags = flags;
-        this.headers = headers;
+    public ChatPacket(JsonObject header, JsonObject payload) {
+        this.header = header;
         this.payload = payload;
     }
 
-    public byte getFlags() {
-        return this.flags;
-    }
-
-    public JsonObject getHeaders() {
-        return this.headers;
+    public JsonObject getHeader() {
+        return this.header;
     }
 
     public JsonObject getPayload() {

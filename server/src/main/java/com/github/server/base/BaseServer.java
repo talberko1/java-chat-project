@@ -1,4 +1,4 @@
-package com.github.server;
+package com.github.server.base;
 
 import java.io.IOException;
 import java.net.InetAddress;

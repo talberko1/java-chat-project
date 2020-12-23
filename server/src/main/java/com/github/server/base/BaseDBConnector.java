@@ -1,4 +1,4 @@
-package com.github.server;
+package com.github.server.base;
 
 public abstract class BaseDBConnector {
     protected final String uri;
