@@ -85,7 +85,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
             reply(user, ChatCommand.REGISTER, STATUS_OK, REGISTER_SUCCESS_MESSAGE);
 
             JsonObject payload = generatePayload(username + USER_JOINED);
-            JsonObject header = generateHeader(ChatCommand.REGISTER, payload.size());
+            JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
 
             broadcast(user, header, payload);
         } else {
@@ -103,7 +103,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
                 reply(user, ChatCommand.LOGIN, STATUS_OK, LOGIN_SUCCESS_MESSAGE);
 
                 JsonObject payload = generatePayload(username + USER_JOINED);
-                JsonObject header = generateHeader(ChatCommand.LOGIN, payload.size());
+                JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
 
                 broadcast(user, header, payload);
             } else {
@@ -119,7 +119,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
         String username = onlineUsers.get(user);
 
         JsonObject payload = generatePayload(username + USER_LEFT);
-        JsonObject header = generateHeader(ChatCommand.LOGOUT, payload.size());
+        JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
 
         broadcast(user, header, payload);
         onlineUsers.remove(user);

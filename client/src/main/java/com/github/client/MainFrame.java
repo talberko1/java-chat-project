@@ -356,18 +356,22 @@ public class MainFrame extends JFrame {
             if (payloadDataElement != null) {
                 String payloadData = payloadDataElement.getAsString();
                 JsonElement senderNameElement = header.get(HEADER_FROM_PROPERTY);
+                String senderName;
                 if (senderNameElement != null) {
-                    String senderName = senderNameElement.getAsString();
-                    if (payloadType.equals(CONTENT_TEXT)) {
-                        chatPanel.addLine(senderName, payloadData);
-                    }
-                    else if (payloadType.equals(CONTENT_IMAGE)) {
+                    senderName = senderNameElement.getAsString();
+                }
+                else {
+                    senderName = "{server}";
+                }
+                if (payloadType.equals(CONTENT_TEXT)) {
+                    chatPanel.addLine(senderName, payloadData);
+                }
+                else if (payloadType.equals(CONTENT_IMAGE)) {
 
-                        chatPanel.addImage(senderName, urlToImage(payloadData));
-                    }
-                    else {
-                        System.out.println("Received unknown payload type");
-                    }
+                    chatPanel.addImage(senderName, urlToImage(payloadData));
+                }
+                else {
+                    System.out.println("Received unknown payload type");
                 }
             }
         }
