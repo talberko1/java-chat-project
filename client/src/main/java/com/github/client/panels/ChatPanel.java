@@ -27,7 +27,6 @@ public class ChatPanel extends JPanel {
         this.parent = parent;
 
         setLayout(new GridLayout(3, 2));
-        users = new JLabel();
 
         exitButton = new JButton("Exit");
         exitButton.setBackground(Color.RED);
@@ -58,6 +57,8 @@ public class ChatPanel extends JPanel {
             }
         });
         add(sendButton);
+        users = new JLabel();
+        add(users);
 
         setBackground(BACKGROUND_COLOR);
     }

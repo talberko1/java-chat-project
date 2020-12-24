@@ -35,6 +35,7 @@ public class MainFrame extends JFrame {
     private static final String CHAT_PANEL = "chat";
     private static final String INITIAL_NAME = "guest";
     public static final String PAYLOAD_ONLINE_PROPERTY = "online";
+    public static final String SERVER = "{server}";
     private final EntryPanel entryPanel;
     private final RegisterPanel registerPanel;
     private final LoginPanel loginPanel;
@@ -297,7 +298,7 @@ public class MainFrame extends JFrame {
             JsonElement dataElement = payload.get(PAYLOAD_DATA_PROPERTY);
             if (dataElement != null) {
                 String data = dataElement.getAsString();
-                chatPanel.addLine("{server}", data);
+                chatPanel.addLine(SERVER, data);
             }
         }
 
@@ -381,7 +382,7 @@ public class MainFrame extends JFrame {
                     senderName = senderNameElement.getAsString();
                 }
                 else {
-                    senderName = "{server}";
+                    senderName = SERVER;
                 }
                 if (payloadType.equals(CONTENT_TEXT)) {
                     chatPanel.addLine(senderName, payloadData);
