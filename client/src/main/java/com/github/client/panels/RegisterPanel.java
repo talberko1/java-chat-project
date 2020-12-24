@@ -1,7 +1,7 @@
 package com.github.client.panels;
 
 import com.github.client.MainFrame;
-import com.github.client.protocol.ChatAPI;
+import com.github.client.protocol.ChatCommand;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,11 +14,9 @@ public class RegisterPanel extends JPanel {
     private final JTextField usernameField;
     private final JPasswordField passwordField;
     private final JButton registerButton;
-    private final ChatAPI api;
 
     public RegisterPanel(MainFrame parent) {
         this.parent = parent;
-        this.api = parent.getClientAPI();
 
         setBackground(BACKGROUND_COLOR);
         setLayout(new SpringLayout());
@@ -33,7 +31,7 @@ public class RegisterPanel extends JPanel {
         registerButton.addActionListener(e -> {
             String username = usernameField.getText();
             String password = new String(passwordField.getPassword());
-            this.api.register(username, password);
+            this.parent.initiateSession(ChatCommand.REGISTER, username, password);
         });
 
         JPanel pageContainer = new JPanel();

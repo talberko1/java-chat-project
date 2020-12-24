@@ -4,14 +4,17 @@ import com.github.client.MainFrame;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
 
 public class EntryPanel extends JPanel {
     private static final String REGISTER_BUTTON_TEXT = "Sign Up";
     private static final String LOGIN_BUTTON_TEXT = "Sign In";
+    private static final String EXIT_BUTTON_TEXT = "Exit to Desktop";
     private static final Color BACKGROUND_COLOR = new Color(0, 255, 0);
     private final MainFrame parent;
     private final JButton registerButton;
     private final JButton loginButton;
+    private final JButton exitButton;
     public EntryPanel(MainFrame parentWindow) {
         parent = parentWindow;
 
@@ -34,5 +37,17 @@ public class EntryPanel extends JPanel {
             parent.showLoginPanel();
         });
         add(loginButton);
+
+        exitButton = new JButton(EXIT_BUTTON_TEXT);
+        exitButton.setBackground(Color.BLUE);
+        exitButton.setForeground(Color.WHITE);
+        exitButton.addActionListener(e -> {
+            try {
+                parent.close();
+            } catch (InterruptedException | IOException interruptedException) {
+                interruptedException.printStackTrace();
+            }
+        });
+        add(exitButton);
     }
 }

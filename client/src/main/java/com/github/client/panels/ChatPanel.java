@@ -1,7 +1,7 @@
 package com.github.client.panels;
 
+import com.github.client.ChatConstants;
 import com.github.client.MainFrame;
-import com.github.client.protocol.ChatAPI;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
@@ -14,7 +14,6 @@ public class ChatPanel extends JPanel {
     private static final Color BACKGROUND_COLOR = new Color(0, 255, 0);
 
     private final MainFrame parent;
-    private final ChatAPI api;
 
     private final JButton exitButton;
     private final StyledDocument messages;
@@ -23,15 +22,14 @@ public class ChatPanel extends JPanel {
 
     public ChatPanel(MainFrame parent) {
         this.parent = parent;
-        this.api = parent.getClientAPI();
 
-        setLayout(new GridBagLayout());
+        setLayout(new GridLayout(3, 2));
 
         exitButton = new JButton("Exit");
         exitButton.setBackground(Color.RED);
         exitButton.setForeground(Color.WHITE);
         exitButton.addActionListener(e -> {
-            api.logout();
+            this.parent.logout();
         });
         add(exitButton);
 
@@ -50,9 +48,9 @@ public class ChatPanel extends JPanel {
         sendButton.addActionListener(e -> {
             String data = messageField.getText();
             if (!data.isEmpty()) {
-                this.api.broadcast(this.parent.getUsername(), ChatAPI.CONTENT_TEXT, data);
+                this.parent.broadcast(ChatConstants.CONTENT_TEXT, data);
                 messageField.setText("");
-                updateMessages(data);
+                addLine(this.parent.getUsername(), data);
             }
         });
         add(sendButton);
@@ -60,18 +58,19 @@ public class ChatPanel extends JPanel {
         setBackground(BACKGROUND_COLOR);
     }
 
-    public void updateMessages(String message) {
+    public void addLine(String senderName, String data) {
         try {
-            messages.insertString(messages.getLength(), message + "\n", null);
+            messages.insertString(messages.getLength(), senderName + ": " + data + "\n", null);
         } catch (BadLocationException e) {
             e.printStackTrace();
         }
     }
 
-    public void updateMessages(Image image) {
+    public void addImage(String senderName, Image image) {
         try {
             Style style = messages.addStyle("StyleName", null);
             StyleConstants.setIcon(style, new ImageIcon(image));
+            messages.insertString(messages.getLength(), senderName + ":" + "\n", null);
             messages.insertString(messages.getLength(), "\n", style);
         } catch (BadLocationException e) {
             e.printStackTrace();

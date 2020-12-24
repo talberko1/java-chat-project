@@ -1,20 +1,21 @@
 package com.github.client.protocol;
 
-import com.github.client.protocol.base.ChatHeader;
+import com.google.gson.JsonObject;
 
 public class ChatPacket {
-    private final ChatHeader header;
-    private final String data;
-    public ChatPacket(ChatHeader header, String data) {
+    private final JsonObject header;
+    private final JsonObject payload;
+
+    public ChatPacket(JsonObject header, JsonObject payload) {
         this.header = header;
-        this.data = data;
+        this.payload = payload;
     }
 
-    public ChatHeader getHeader() {
+    public JsonObject getHeader() {
         return this.header;
     }
 
-    public String getData() {
-        return this.data;
+    public JsonObject getPayload() {
+        return this.payload;
     }
 }

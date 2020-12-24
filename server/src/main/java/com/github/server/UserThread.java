@@ -2,6 +2,7 @@ package com.github.server;
 
 import com.github.server.protocol.ChatPacket;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 import java.io.*;
 import java.net.Socket;
@@ -45,9 +46,9 @@ public class UserThread extends Thread {
         return gson.fromJson(request, ChatPacket.class);
     }
 
-    public void send(ChatPacket packet) {
-        String request = gson.toJson(packet);
-        out.println(request);
+    public void send(JsonObject header, JsonObject payload) {
+        String response = gson.toJson(new ChatPacket(header, payload));
+        out.println(response);
         out.flush();
     }
 

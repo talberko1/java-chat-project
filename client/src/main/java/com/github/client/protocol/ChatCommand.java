@@ -1,4 +1,4 @@
-package com.github.client.protocol.base;
+package com.github.client.protocol;
 
 public enum ChatCommand {
     REGISTER,
@@ -6,5 +6,6 @@ public enum ChatCommand {
     LOGOUT,
     UNICAST,
     MULTICAST,
-    BROADCAST
+    BROADCAST,
+    UNKNOWN
 }

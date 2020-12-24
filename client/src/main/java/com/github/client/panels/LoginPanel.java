@@ -1,7 +1,7 @@
 package com.github.client.panels;
 
 import com.github.client.MainFrame;
-import com.github.client.protocol.ChatAPI;
+import com.github.client.protocol.ChatCommand;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,7 +14,6 @@ public class LoginPanel extends JPanel {
     private static final String USERNAME_LABEL_TEXT = "Username:";
 
     private final MainFrame parent;
-    private final ChatAPI api;
 
     private final JTextField usernameField;
     private final JPasswordField passwordField;
@@ -22,7 +21,6 @@ public class LoginPanel extends JPanel {
 
     public LoginPanel(MainFrame parent) {
         this.parent = parent;
-        this.api = parent.getClientAPI();
 
         setBackground(BACKGROUND_COLOR);
         setLayout(new GridLayout(3, 2));
@@ -43,7 +41,7 @@ public class LoginPanel extends JPanel {
         loginButton.addActionListener(e -> {
             String username = usernameField.getText();
             String password = new String(passwordField.getPassword());
-            this.api.login(username, password);
+            this.parent.initiateSession(ChatCommand.LOGIN, username, password);
         });
 
         add(usernameLabel);

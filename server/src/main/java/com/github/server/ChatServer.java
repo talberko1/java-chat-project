@@ -43,8 +43,8 @@ public class ChatServer extends BaseServer implements IRequestHandler {
     public void handleRequest(UserThread user, ChatPacket request) {
         synchronized (this) {
             System.out.println(request.toString());
-            JsonObject headers = request.getHeader();
-            JsonElement commandElement = headers.get(HEADER_COMMAND_PROPERTY);
+            JsonObject header = request.getHeader();
+            JsonElement commandElement = header.get(HEADER_COMMAND_PROPERTY);
             if (commandElement != null) {
                 ChatCommand command = ChatCommand.valueOf(commandElement.getAsString());
                 switch (command) {
@@ -103,7 +103,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
                 reply(user, ChatCommand.LOGIN, STATUS_OK, LOGIN_SUCCESS_MESSAGE);
 
                 JsonObject payload = generatePayload(username + USER_JOINED);
-                JsonObject header = generateHeader(ChatCommand.REGISTER, payload.size());
+                JsonObject header = generateHeader(ChatCommand.LOGIN, payload.size());
 
                 broadcast(user, header, payload);
             } else {
@@ -119,7 +119,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
         String username = onlineUsers.get(user);
 
         JsonObject payload = generatePayload(username + USER_LEFT);
-        JsonObject header = generateHeader(ChatCommand.REGISTER, payload.size());
+        JsonObject header = generateHeader(ChatCommand.LOGOUT, payload.size());
 
         broadcast(user, header, payload);
         onlineUsers.remove(user);
@@ -132,7 +132,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
         if (targetElement != null) {
             String targetName = targetElement.getAsString();
             if (unicast(user, targetName, request.getPayload())) {
-                reply(user, ChatCommand.UNICAST, STATUS_OK, DIRECT_SUCCESS_MESSAGE);
+                reply(user, ChatCommand.UNICAST, STATUS_OK, String.format(DIRECT_SUCCESS_MESSAGE, targetName));
             }
             else {
                 reply(user, ChatCommand.UNICAST, STATUS_ERROR, String.format(UNICAST_USER_NOT_FOUND, targetName));
@@ -150,7 +150,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
             for (JsonElement targetElement : targets) {
                 String targetName = targetElement.getAsString();
                 if (unicast(user, targetName, request.getPayload())) {
-                    reply(user, ChatCommand.MULTICAST, STATUS_OK, DIRECT_SUCCESS_MESSAGE);
+                    reply(user, ChatCommand.MULTICAST, STATUS_OK, String.format(DIRECT_SUCCESS_MESSAGE, targetName));
                 }
                 else {
                     reply(user, ChatCommand.MULTICAST, STATUS_ERROR, String.format(UNICAST_USER_NOT_FOUND, targetName));
@@ -207,15 +207,15 @@ public class ChatServer extends BaseServer implements IRequestHandler {
         return false;
     }
 
-    public void broadcast(UserThread ignored, JsonObject headers, JsonObject payload) {
+    public void broadcast(UserThread ignored, JsonObject header, JsonObject payload) {
         for (UserThread other : onlineUsers.keySet()) {
             if (ignored != other) {
-                send(other, headers, payload);
+                send(other, header, payload);
             }
         }
     }
 
-    public void send(UserThread user, JsonObject headers, JsonObject data) {
-        user.send(new ChatPacket(headers, data));
+    public void send(UserThread user, JsonObject header, JsonObject payload) {
+        user.send(header, payload);
     }
 }

@@ -1,29 +1,32 @@
 package com.github.client;
 
-import com.github.client.protocol.ChatAPI;
+import com.github.client.protocol.ChatCommand;
 import com.github.client.protocol.ChatPacket;
-import com.github.client.protocol.base.ChatCommand;
-import com.github.client.protocol.base.ChatHeader;
-import com.github.client.protocol.base.ChatMessageHeader;
 import com.github.client.panels.ChatPanel;
 import com.github.client.panels.EntryPanel;
 import com.github.client.panels.LoginPanel;
 import com.github.client.panels.RegisterPanel;
-import com.github.client.protocol.headers.BroadcastHeader;
-import com.github.client.protocol.headers.MulticastHeader;
-import com.github.client.protocol.headers.UnicastHeader;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.storage.Bucket;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.cloud.StorageClient;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.*;
+import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
+
+import static com.github.client.ChatConstants.*;
 
 public class MainFrame extends JFrame {
     private static final String ENTRY_PANEL = "entry";
@@ -31,7 +34,6 @@ public class MainFrame extends JFrame {
     private static final String LOGIN_PANEL = "login";
     private static final String CHAT_PANEL = "chat";
     private static final String INITIAL_NAME = "guest";
-    private final ChatAPI api;
     private final EntryPanel entryPanel;
     private final RegisterPanel registerPanel;
     private final LoginPanel loginPanel;
@@ -40,29 +42,37 @@ public class MainFrame extends JFrame {
     private final JPanel container;
     private final FirebaseApp firebaseApp;
     private String username;
+    private final Socket socket;
+    private final BufferedReader in;
+    private final PrintWriter out;
+    private final Gson gson;
+    private final Thread receiveThread;
+    private boolean listening;
 
-    public MainFrame(String title, ChatAPI api, String firebaseKeyPath) throws IOException {
+    public MainFrame(String title, String serverIp, int port, String firebaseKeyPath) throws IOException {
         super(title);
-        this.api = api;
-        Thread receiveThread = new Thread(() -> {
-            while (true) {
+        username = INITIAL_NAME;
+        this.socket = new Socket(serverIp, port);
+        this.in = new BufferedReader(new InputStreamReader(new DataInputStream(socket.getInputStream())));
+        this.out = new PrintWriter(new OutputStreamWriter(new DataOutputStream(socket.getOutputStream())));
+        gson = new Gson();
+        listening = true;
+        receiveThread = new Thread(() -> {
+            while (listening) {
                 try {
-                    ChatPacket response = this.api.receive();
+                    ChatPacket response = this.receive();
                     handleResponse(response);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         });
-        username = INITIAL_NAME;
-
+        receiveThread.start();
         FileInputStream serviceAccount = new FileInputStream(firebaseKeyPath);
         FirebaseOptions options = new FirebaseOptions.Builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                 .build();
         firebaseApp = FirebaseApp.initializeApp(options);
-
-        receiveThread.start();
         layout = new CardLayout();
         container = new JPanel(layout);
 
@@ -76,16 +86,41 @@ public class MainFrame extends JFrame {
         container.add(loginPanel, LOGIN_PANEL);
         container.add(chatPanel, CHAT_PANEL);
         add(container);
+
+        this.addWindowListener(new WindowAdapter(){
+            public void windowClosing(WindowEvent e){
+                try {
+                    close();
+                } catch (IOException | InterruptedException ioException) {
+                    ioException.printStackTrace();
+                }
+            }
+        });
+
         pack();
         showEntryPanel();
     }
 
-    public String getUsername() {
-        return username;
+    public void close() throws InterruptedException, IOException {
+        listening = false;
+        socket.close();
+        System.exit(0);
     }
 
-    public ChatAPI getClientAPI() {
-        return api;
+    public ChatPacket receive() throws IOException {
+        String response = in.readLine();
+        System.out.println(response);
+        return gson.fromJson(response, ChatPacket.class);
+    }
+
+    public void send(JsonObject header, JsonObject payload) {
+        String request = gson.toJson(new ChatPacket(header, payload));
+        out.println(request);
+        out.flush();
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     public void uploadImage(String imagePath) {
@@ -117,102 +152,237 @@ public class MainFrame extends JFrame {
     }
 
     public void handleResponse(ChatPacket response) {
-        ChatHeader header = response.getHeader();
-        ChatCommand command = header.getCommand();
-        String data = response.getData();
-        switch (command) {
-            case REGISTER:
-                handleRegister(data);
-                break;
-            case LOGIN:
-                handleLogin(data);
-                break;
-            case LOGOUT:
-                handleLogout(data);
-                break;
-            case UNICAST:
-                handleUnicast((UnicastHeader)header, data);
-                break;
-            case MULTICAST:
-                handleMulticast((MulticastHeader)header, data);
-                break;
-            case BROADCAST:
-                handleBroadcast((BroadcastHeader)header, data);
-                break;
-            default:
-                break;
-        }
-    }
-
-    private void handleRegister(String data) {
-        if (data.equals("OK")) {
-            this.username = registerPanel.getUsername();
-            registerPanel.clearFields();
-            showChatPanel();
-        }
-    }
-
-    private void handleLogin(String data) {
-        if (data.equals("OK")) {
-            this.username = loginPanel.getUsername();
-            loginPanel.clearFields();
-            showChatPanel();
-        }
-    }
-
-    private void handleLogout(String data) {
-        if (data.equals("BYE")) {
-            api.disconnect();
-            showEntryPanel();
-        }
-    }
-
-    private void handleUnicast(UnicastHeader header, String data) {
-        String to = header.getTo();
-        if (to.equals(this.username)) {
-            handleMessage(header, data);
-        }
-    }
-
-    private void handleMulticast(MulticastHeader header, String data) {
-        String[] to = header.getTo();
-        boolean found = false;
-        for (int i = 0; i < to.length && !found; i++) {
-            if (to[i].equals(this.username)) {
-                found = true;
+        JsonObject header = response.getHeader();
+        JsonElement commandElement = header.get(HEADER_COMMAND_PROPERTY);
+        if (commandElement != null) {
+            ChatCommand command = ChatCommand.valueOf(commandElement.getAsString());
+            switch (command) {
+                case REGISTER:
+                    handleRegister(response);
+                    break;
+                case LOGIN:
+                    handleLogin(response);
+                    break;
+                case LOGOUT:
+                    handleLogout(response);
+                    break;
+                case UNICAST:
+                    handleUnicast(response);
+                    break;
+                case MULTICAST:
+                    handleMulticast(response);
+                    break;
+                case BROADCAST:
+                    handleBroadcast(response);
+                    break;
+                default:
+                    break;
             }
         }
-        if (found) {
-            handleMessage(header, data);
-        }
     }
 
-    private void handleBroadcast(BroadcastHeader header, String data) {
-        handleMessage(header, data);
-    }
-
-    public void handleMessage(ChatMessageHeader header, String data) {
-        String contentType = header.getContentType();
-
-        if (contentType.equals(ChatAPI.CONTENT_TEXT)) {
-            chatPanel.updateMessages(data);
-        }
-        else if (contentType.equals(ChatAPI.CONTENT_IMAGE)) {
-            try {
-                chatPanel.updateMessages(urlToImage(data));
-            } catch (IOException e) {
-                e.printStackTrace();
+    public void handleRegister(ChatPacket response) {
+        JsonObject header = response.getHeader();
+        JsonElement statusElement = header.get(HEADER_STATUS_PROPERTY);
+        if (statusElement != null) {
+            String status = statusElement.getAsString();
+            if (status.equals(STATUS_OK)) {
+                this.username = registerPanel.getUsername();
+                registerPanel.clearFields();
+                showChatPanel();
             }
         }
+    }
+
+    public void handleLogin(ChatPacket response) {
+        JsonObject header = response.getHeader();
+        JsonElement statusElement = header.get(HEADER_STATUS_PROPERTY);
+        if (statusElement != null) {
+            String status = statusElement.getAsString();
+            if (status.equals(STATUS_OK)) {
+                this.username = loginPanel.getUsername();
+                loginPanel.clearFields();
+                showChatPanel();
+            }
+        }
+    }
+
+    public void handleLogout(ChatPacket response) {
+        JsonObject header = response.getHeader();
+        JsonElement statusElement = header.get(HEADER_STATUS_PROPERTY);
+        if (statusElement != null) {
+            String status = statusElement.getAsString();
+            if (status.equals(STATUS_OK)) {
+                disconnect();
+                showEntryPanel();
+            }
+        }
+    }
+
+    public void handleUnicast(ChatPacket response) {
+        JsonObject header = response.getHeader();
+        JsonObject payload = response.getPayload();
+        JsonElement statusElement = header.get(HEADER_STATUS_PROPERTY);
+        // if its an acknowledgement response
+        if (statusElement != null) {
+            String status = statusElement.getAsString();
+            if (status.equals(STATUS_OK)) {
+                // server acknowledged the unicast request
+                JsonElement payloadDataElement = payload.get(PAYLOAD_DATA_PROPERTY);
+                if (payloadDataElement != null) {
+                    String payloadData = payloadDataElement.getAsString();
+                    System.out.println(payloadData);
+                }
+            }
+        }
+        // someone sent this client a message.
         else {
-            System.err.println("received unsupported content");
+            updateChatMessages(response);
         }
     }
 
-    public Image urlToImage(String urlString) throws IOException {
-        URL url = new URL(urlString);
-        URLConnection connection = url.openConnection();
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36");
-        return ImageIO.read(connection.getInputStream());
+    public void handleMulticast(ChatPacket response) {
+        JsonObject header = response.getHeader();
+        JsonObject payload = response.getPayload();
+        JsonElement statusElement = header.get(HEADER_STATUS_PROPERTY);
+        if (statusElement != null) {
+            String status = statusElement.getAsString();
+            if (status.equals(STATUS_OK)) {
+                // server acknowledged the multicast request
+                JsonElement payloadDataElement = payload.get(PAYLOAD_DATA_PROPERTY);
+                if (payloadDataElement != null) {
+                    String payloadData = payloadDataElement.getAsString();
+                    System.out.println(payloadData);
+                }
+            }
+        }
+        // someone sent this client a message.
+        else {
+            updateChatMessages(response);
+        }
+    }
+
+    public void handleBroadcast(ChatPacket response) {
+        JsonObject header = response.getHeader();
+        JsonObject payload = response.getPayload();
+        JsonElement statusElement = header.get(HEADER_STATUS_PROPERTY);
+        if (statusElement != null) {
+            String status = statusElement.getAsString();
+            if (status.equals(STATUS_OK)) {
+                // server acknowledged the broadcast request
+                JsonElement payloadDataElement = payload.get(PAYLOAD_DATA_PROPERTY);
+                if (payloadDataElement != null) {
+                    String payloadData = payloadDataElement.getAsString();
+                    System.out.println(payloadData);
+                }
+            }
+        }
+        // someone sent this client a message.
+        else {
+            updateChatMessages(response);
+        }
+    }
+
+    public void disconnect() {
+        this.username = INITIAL_NAME;
+    }
+
+    public void initiateSession(ChatCommand command, String username, String password) {
+        JsonObject payload = generateSessionInitiationPayload(username, password);
+        JsonObject header = generateHeader(command, payload.size());
+        send(header, payload);
+    }
+
+    public void logout() {
+        JsonObject payload = new JsonObject();
+        JsonObject header = generateHeader(ChatCommand.LOGIN, payload.size());
+        send(header, payload);
+    }
+
+    public void unicast(String targetName, String payloadType, String data) {
+        JsonObject payload = generatePayload(data);
+        JsonObject header = generateHeader(ChatCommand.UNICAST, payload.size());
+        header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, payloadType);
+        header.addProperty(HEADER_TO_PROPERTY, targetName);
+        send(header, payload);
+    }
+
+    public void multicast(String[] targetNames, String payloadType, String data) {
+        JsonObject payload = generatePayload(data);
+        JsonObject header = generateHeader(ChatCommand.UNICAST, payload.size());
+        header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, payloadType);
+        JsonArray targets = new JsonArray();
+        for (String name : targetNames) {
+            targets.add(name);
+        }
+        header.add(HEADER_TO_PROPERTY, targets);
+        send(header, payload);
+    }
+
+    public void broadcast(String payloadType, String data) {
+        JsonObject payload = generatePayload(data);
+        JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
+        header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, payloadType);
+        send(header, payload);
+    }
+
+    public JsonObject generateSessionInitiationPayload(String username, String password) {
+        JsonObject payload = new JsonObject();
+        payload.addProperty(PAYLOAD_USERNAME_PROPERTY, username);
+        payload.addProperty(PAYLOAD_PASSWORD_PROPERTY, password);
+        return payload;
+    }
+
+    public JsonObject generatePayload(String data) {
+        JsonObject payload = new JsonObject();
+        payload.addProperty(PAYLOAD_DATA_PROPERTY, data);
+        return payload;
+    }
+
+    public JsonObject generateHeader(ChatCommand command, int payloadLength) {
+        JsonObject header = new JsonObject();
+        header.addProperty(HEADER_COMMAND_PROPERTY, command.name());
+        header.addProperty(HEADER_PAYLOAD_LENGTH_PROPERTY, payloadLength);
+        return header;
+    }
+
+    public void updateChatMessages(ChatPacket message) {
+        JsonObject header = message.getHeader();
+        JsonObject payload = message.getPayload();
+        JsonElement payloadTypeElement = header.get(HEADER_PAYLOAD_TYPE_PROPERTY);
+        if (payloadTypeElement != null) {
+            String payloadType = payloadTypeElement.getAsString();
+            JsonElement payloadDataElement = payload.get(PAYLOAD_DATA_PROPERTY);
+            if (payloadDataElement != null) {
+                String payloadData = payloadDataElement.getAsString();
+                JsonElement senderNameElement = header.get(HEADER_FROM_PROPERTY);
+                if (senderNameElement != null) {
+                    String senderName = senderNameElement.getAsString();
+                    if (payloadType.equals(CONTENT_TEXT)) {
+                        chatPanel.addLine(senderName, payloadData);
+                    }
+                    else if (payloadType.equals(CONTENT_IMAGE)) {
+
+                        chatPanel.addImage(senderName, urlToImage(payloadData));
+                    }
+                    else {
+                        System.out.println("Received unknown payload type");
+                    }
+                }
+            }
+        }
+    }
+
+    public Image urlToImage(String urlString) {
+        try {
+            URL url = new URL(urlString);
+            URLConnection connection = url.openConnection();
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36");
+            return ImageIO.read(connection.getInputStream());
+        }
+        catch(IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

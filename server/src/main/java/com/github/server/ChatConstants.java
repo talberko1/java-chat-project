@@ -14,7 +14,7 @@ public class ChatConstants {
 
     public static final String NEW_CONNECTION = "[+] new connection";
     public static final String LOGOUT_RESPONSE = "BYE";
-    public static final String DIRECT_SUCCESS_MESSAGE = "Successfully sent to ";
+    public static final String DIRECT_SUCCESS_MESSAGE = "Successfully sent to %s";
     public static final String BROADCAST_SUCCESS_MESSAGE = "Successfully sent broadcast message";
     public static final String PAYLOAD_DATA_PROPERTY = "data";
     public static final String PAYLOAD_USERNAME_PROPERTY = "username";
