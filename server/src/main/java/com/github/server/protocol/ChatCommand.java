@@ -7,5 +7,6 @@ public enum ChatCommand {
     UNICAST,
     MULTICAST,
     BROADCAST,
+    INFO,
     UNKNOWN
 }

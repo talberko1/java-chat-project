@@ -2,6 +2,8 @@ package com.github.client.panels;
 
 import com.github.client.ChatConstants;
 import com.github.client.MainFrame;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
@@ -19,11 +21,13 @@ public class ChatPanel extends JPanel {
     private final StyledDocument messages;
     private final JTextField messageField;
     private final JButton sendButton;
+    private final JLabel users;
 
     public ChatPanel(MainFrame parent) {
         this.parent = parent;
 
         setLayout(new GridLayout(3, 2));
+        users = new JLabel();
 
         exitButton = new JButton("Exit");
         exitButton.setBackground(Color.RED);
@@ -56,6 +60,16 @@ public class ChatPanel extends JPanel {
         add(sendButton);
 
         setBackground(BACKGROUND_COLOR);
+    }
+
+    public void updateOnline(JsonArray names) {
+        StringBuilder online = new StringBuilder();
+        for (JsonElement nameElement : names) {
+            String name = nameElement.getAsString();
+            online.append(name).append(" ");
+        }
+        users.setText(online.toString());
+
     }
 
     public void addLine(String senderName, String data) {

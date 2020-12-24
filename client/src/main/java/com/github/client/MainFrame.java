@@ -34,6 +34,7 @@ public class MainFrame extends JFrame {
     private static final String LOGIN_PANEL = "login";
     private static final String CHAT_PANEL = "chat";
     private static final String INITIAL_NAME = "guest";
+    public static final String PAYLOAD_ONLINE_PROPERTY = "online";
     private final EntryPanel entryPanel;
     private final RegisterPanel registerPanel;
     private final LoginPanel loginPanel;
@@ -115,6 +116,7 @@ public class MainFrame extends JFrame {
 
     public void send(JsonObject header, JsonObject payload) {
         String request = gson.toJson(new ChatPacket(header, payload));
+        System.out.println(request);
         out.println(request);
         out.flush();
     }
@@ -175,6 +177,9 @@ public class MainFrame extends JFrame {
                 case BROADCAST:
                     handleBroadcast(response);
                     break;
+                case INFO:
+                    handleInfo(response);
+                    break;
                 default:
                     break;
             }
@@ -231,7 +236,7 @@ public class MainFrame extends JFrame {
                 JsonElement payloadDataElement = payload.get(PAYLOAD_DATA_PROPERTY);
                 if (payloadDataElement != null) {
                     String payloadData = payloadDataElement.getAsString();
-                    System.out.println(payloadData);
+                    // do something with the success response
                 }
             }
         }
@@ -252,7 +257,7 @@ public class MainFrame extends JFrame {
                 JsonElement payloadDataElement = payload.get(PAYLOAD_DATA_PROPERTY);
                 if (payloadDataElement != null) {
                     String payloadData = payloadDataElement.getAsString();
-                    System.out.println(payloadData);
+                    // do something with the success response
                 }
             }
         }
@@ -273,7 +278,7 @@ public class MainFrame extends JFrame {
                 JsonElement payloadDataElement = payload.get(PAYLOAD_DATA_PROPERTY);
                 if (payloadDataElement != null) {
                     String payloadData = payloadDataElement.getAsString();
-                    System.out.println(payloadData);
+                    // do something with the success response
                 }
             }
         }
@@ -281,6 +286,21 @@ public class MainFrame extends JFrame {
         else {
             updateChatMessages(response);
         }
+    }
+
+    public void handleInfo(ChatPacket response) {
+        JsonObject payload = response.getPayload();
+        JsonElement onlineElement = payload.get(PAYLOAD_ONLINE_PROPERTY);
+        if (onlineElement != null) {
+            JsonArray online = onlineElement.getAsJsonArray();
+            chatPanel.updateOnline(online);
+            JsonElement dataElement = payload.get(PAYLOAD_DATA_PROPERTY);
+            if (dataElement != null) {
+                String data = dataElement.getAsString();
+                chatPanel.addLine("{server}", data);
+            }
+        }
+
     }
 
     public void disconnect() {

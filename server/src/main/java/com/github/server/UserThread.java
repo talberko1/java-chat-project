@@ -13,27 +13,32 @@ public class UserThread extends Thread {
     private final Socket socket;
     private final BufferedReader in;
     private final PrintWriter out;
+    private boolean alive;
 
-    public UserThread(IRequestHandler requestHandlerInterface, Socket socket) throws IOException {
-        requestHandler = requestHandlerInterface;
+    public UserThread(IRequestHandler requestHandler, Socket socket) throws IOException {
+        this.requestHandler = requestHandler;
         this.socket = socket;
         this.in = new BufferedReader(new InputStreamReader(new DataInputStream(socket.getInputStream())));
         this.out = new PrintWriter(new OutputStreamWriter(new DataOutputStream(socket.getOutputStream())));
+        this.alive = true;
     }
 
     @Override
     public void run() {
-        try {
-            ChatPacket request = receive();
-            requestHandler.handleRequest(this, request);
+        while (this.alive) {
+            try {
+                ChatPacket request = receive();
+                requestHandler.handleRequest(this, request);
 
-        } catch (IOException e) {
-            disconnect();
+            } catch (IOException e) {
+                disconnect();
+            }
         }
     }
 
     public void disconnect() {
         try {
+            this.alive = false;
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -42,12 +47,13 @@ public class UserThread extends Thread {
 
     public ChatPacket receive() throws IOException {
         String request = in.readLine();
-        System.out.println(request);
+        System.out.println("received : " + request);
         return gson.fromJson(request, ChatPacket.class);
     }
 
     public void send(JsonObject header, JsonObject payload) {
         String response = gson.toJson(new ChatPacket(header, payload));
+        System.out.println(response);
         out.println(response);
         out.flush();
     }

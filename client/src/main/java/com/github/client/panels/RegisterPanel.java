@@ -19,7 +19,7 @@ public class RegisterPanel extends JPanel {
         this.parent = parent;
 
         setBackground(BACKGROUND_COLOR);
-        setLayout(new SpringLayout());
+        setLayout(new GridLayout(3, 2));
 
         JLabel usernameLabel = new JLabel("Username:");
         usernameField = new JTextField();

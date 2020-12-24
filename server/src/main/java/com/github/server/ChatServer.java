@@ -18,6 +18,7 @@ import static com.github.server.ChatConstants.*;
 public class ChatServer extends BaseServer implements IRequestHandler {
 
 
+    public static final String PAYLOAD_ONLINE_PROPERTY = "online";
     private final Map<UserThread, String> onlineUsers = new HashMap<UserThread, String>();
     private final BaseDBConnector userDBConnector;
 
@@ -27,8 +28,8 @@ public class ChatServer extends BaseServer implements IRequestHandler {
     }
 
     @Override
-    public void handleClient(Socket client) throws IOException {
-        UserThread userThread = new UserThread(this, client);
+    public void handleClient(Socket clientSocket) throws IOException {
+        UserThread userThread = new UserThread(this, clientSocket);
         userThread.start();
         System.out.println(NEW_CONNECTION);
     }
@@ -36,13 +37,12 @@ public class ChatServer extends BaseServer implements IRequestHandler {
     @Override
     public void onServerError(IOException e) {
         System.err.println(e.getMessage());
+        System.out.println("error has occurred server side");
         stop();
     }
 
-    //Synchronized!!!
     public void handleRequest(UserThread user, ChatPacket request) {
         synchronized (this) {
-            System.out.println(request.toString());
             JsonObject header = request.getHeader();
             JsonElement commandElement = header.get(HEADER_COMMAND_PROPERTY);
             if (commandElement != null) {
@@ -85,7 +85,8 @@ public class ChatServer extends BaseServer implements IRequestHandler {
             reply(user, ChatCommand.REGISTER, STATUS_OK, REGISTER_SUCCESS_MESSAGE);
 
             JsonObject payload = generatePayload(username + USER_JOINED);
-            JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
+            payload.add(PAYLOAD_ONLINE_PROPERTY, getOnlineUsers());
+            JsonObject header = generateHeader(ChatCommand.INFO, payload.size());
             header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, PAYLOAD_TEXT);
 
             broadcast(user, header, payload);
@@ -104,7 +105,8 @@ public class ChatServer extends BaseServer implements IRequestHandler {
                 reply(user, ChatCommand.LOGIN, STATUS_OK, LOGIN_SUCCESS_MESSAGE);
 
                 JsonObject payload = generatePayload(username + USER_JOINED);
-                JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
+                payload.add(PAYLOAD_ONLINE_PROPERTY, getOnlineUsers());
+                JsonObject header = generateHeader(ChatCommand.INFO, payload.size());
                 header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, PAYLOAD_TEXT);
 
                 broadcast(user, header, payload);
@@ -119,13 +121,16 @@ public class ChatServer extends BaseServer implements IRequestHandler {
     public void handleLogoutCommand(UserThread user) {
         reply(user, ChatCommand.LOGOUT, STATUS_OK, LOGOUT_RESPONSE);
         String username = onlineUsers.get(user);
+        onlineUsers.remove(user);
+
 
         JsonObject payload = generatePayload(username + USER_LEFT);
-        JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
+        payload.add(PAYLOAD_ONLINE_PROPERTY, getOnlineUsers());
+        JsonObject header = generateHeader(ChatCommand.INFO, payload.size());
         header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, PAYLOAD_TEXT);
 
         broadcast(user, header, payload);
-        onlineUsers.remove(user);
+
         user.disconnect();
     }
 
@@ -136,8 +141,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
             String targetName = targetElement.getAsString();
             if (unicast(user, targetName, request.getPayload())) {
                 reply(user, ChatCommand.UNICAST, STATUS_OK, String.format(DIRECT_SUCCESS_MESSAGE, targetName));
-            }
-            else {
+            } else {
                 reply(user, ChatCommand.UNICAST, STATUS_ERROR, String.format(UNICAST_USER_NOT_FOUND, targetName));
             }
         } else {
@@ -154,8 +158,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
                 String targetName = targetElement.getAsString();
                 if (unicast(user, targetName, request.getPayload())) {
                     reply(user, ChatCommand.MULTICAST, STATUS_OK, String.format(DIRECT_SUCCESS_MESSAGE, targetName));
-                }
-                else {
+                } else {
                     reply(user, ChatCommand.MULTICAST, STATUS_ERROR, String.format(UNICAST_USER_NOT_FOUND, targetName));
                 }
             }
@@ -167,14 +170,28 @@ public class ChatServer extends BaseServer implements IRequestHandler {
 
     public void handleBroadcastCommand(UserThread sender, ChatPacket request) {
         String senderName = onlineUsers.get(sender);
-
-        JsonObject payload = request.getPayload();
-        JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
+        JsonObject requestPayload = request.getPayload();
+        JsonObject requestHeader = request.getHeader();
+        JsonObject header = generateHeader(ChatCommand.BROADCAST, requestPayload.size());
         header.addProperty(HEADER_FROM_PROPERTY, senderName);
 
-        broadcast(sender, header, payload);
+        JsonElement payloadTypeElement = requestHeader.get(HEADER_PAYLOAD_TYPE_PROPERTY);
+        if (payloadTypeElement != null) {
+            String payloadType = payloadTypeElement.getAsString();
+            header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, payloadType);
+        }
+
+        broadcast(sender, header, requestPayload);
 
         reply(sender, ChatCommand.BROADCAST, STATUS_OK, BROADCAST_SUCCESS_MESSAGE);
+    }
+
+    public JsonArray getOnlineUsers() {
+        JsonArray users = new JsonArray();
+        for (String name : onlineUsers.values()) {
+            users.add(name);
+        }
+        return users;
     }
 
     public void reply(UserThread user, ChatCommand command, String status, String message) {
