@@ -86,6 +86,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
 
             JsonObject payload = generatePayload(username + USER_JOINED);
             JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
+            header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, PAYLOAD_TEXT);
 
             broadcast(user, header, payload);
         } else {
@@ -104,6 +105,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
 
                 JsonObject payload = generatePayload(username + USER_JOINED);
                 JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
+                header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, PAYLOAD_TEXT);
 
                 broadcast(user, header, payload);
             } else {
@@ -120,6 +122,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
 
         JsonObject payload = generatePayload(username + USER_LEFT);
         JsonObject header = generateHeader(ChatCommand.BROADCAST, payload.size());
+        header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, PAYLOAD_TEXT);
 
         broadcast(user, header, payload);
         onlineUsers.remove(user);

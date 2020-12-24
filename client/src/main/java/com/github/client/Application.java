@@ -14,8 +14,12 @@ public class Application {
 
             String firebaseKeyPath = properties.getProperty("firebase.key.path");
             String title = properties.getProperty("app.title");
+            int width = Integer.parseInt(properties.getProperty("app.width"));
+            int height = Integer.parseInt(properties.getProperty("app.height"));
+
 
             MainFrame window = new MainFrame(title, serverIp, port, firebaseKeyPath);
+            window.setSize(width, height);
             window.setLocationRelativeTo(null);
             window.setVisible(true);
         } catch (IOException e) {

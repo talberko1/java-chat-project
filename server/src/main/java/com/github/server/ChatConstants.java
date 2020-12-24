@@ -17,6 +17,9 @@ public class ChatConstants {
     public static final String DIRECT_SUCCESS_MESSAGE = "Successfully sent to %s";
     public static final String BROADCAST_SUCCESS_MESSAGE = "Successfully sent broadcast message";
     public static final String PAYLOAD_DATA_PROPERTY = "data";
+    public static final String HEADER_PAYLOAD_TYPE_PROPERTY = "payload-type";
+    public static final String PAYLOAD_TEXT = "text";
+    public static final String PAYLOAD_IMAGE = "image";
     public static final String PAYLOAD_USERNAME_PROPERTY = "username";
     public static final String PAYLOAD_PASSWORD_PROPERTY = "password";
     public static final String HEADER_COMMAND_PROPERTY = "command";
