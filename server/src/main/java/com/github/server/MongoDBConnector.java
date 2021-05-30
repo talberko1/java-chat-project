@@ -28,9 +28,9 @@ public class MongoDBConnector extends BaseDBConnector {
     private Document getUser(String username) {
         FindIterable<Document> documents = collection.find();
         for (Document doc : documents) {
-            if (doc.get(username) != null) {
+            String name = doc.getString(USERNAME_FIELD);
+            if (name.equals(username))
                 return doc;
-            }
         }
         return null;
     }
@@ -38,7 +38,7 @@ public class MongoDBConnector extends BaseDBConnector {
     public boolean passwordMatches(String username, String password) {
         Document document = getUser(username);
         if (document != null) {
-            return document.get(username).equals(password);
+            return document.get(PASSWORD_FIELD).equals(password);
         }
         return false;
     }

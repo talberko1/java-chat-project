@@ -28,6 +28,7 @@ public class UserThread extends Thread {
         while (this.alive) {
             try {
                 ChatPacket request = receive();
+                if (request == null) disconnect();
                 requestHandler.handleRequest(this, request);
 
             } catch (IOException e) {
@@ -47,7 +48,6 @@ public class UserThread extends Thread {
 
     public ChatPacket receive() throws IOException {
         String request = in.readLine();
-        System.out.println("received : " + request);
         return gson.fromJson(request, ChatPacket.class);
     }
 

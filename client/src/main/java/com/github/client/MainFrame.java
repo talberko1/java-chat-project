@@ -23,6 +23,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.URL;
 import java.net.URLConnection;
 
@@ -63,6 +64,7 @@ public class MainFrame extends JFrame {
             while (listening) {
                 try {
                     ChatPacket response = this.receive();
+                    if (response == null) System.exit(0);
                     handleResponse(response);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -110,9 +112,14 @@ public class MainFrame extends JFrame {
     }
 
     public ChatPacket receive() throws IOException {
-        String response = in.readLine();
-        System.out.println(response);
-        return gson.fromJson(response, ChatPacket.class);
+        try {
+            String response = in.readLine();
+            System.out.println(response);
+            return gson.fromJson(response, ChatPacket.class);
+        }
+        catch(SocketException e) {
+            return null;
+        }
     }
 
     public void send(JsonObject header, JsonObject payload) {
@@ -316,7 +323,7 @@ public class MainFrame extends JFrame {
 
     public void logout() {
         JsonObject payload = new JsonObject();
-        JsonObject header = generateHeader(ChatCommand.LOGIN, payload.size());
+        JsonObject header = generateHeader(ChatCommand.LOGOUT, payload.size());
         send(header, payload);
     }
 
@@ -330,7 +337,7 @@ public class MainFrame extends JFrame {
 
     public void multicast(String[] targetNames, String payloadType, String data) {
         JsonObject payload = generatePayload(data);
-        JsonObject header = generateHeader(ChatCommand.UNICAST, payload.size());
+        JsonObject header = generateHeader(ChatCommand.MULTICAST, payload.size());
         header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, payloadType);
         JsonArray targets = new JsonArray();
         for (String name : targetNames) {

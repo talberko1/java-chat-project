@@ -51,9 +51,26 @@ public class ChatPanel extends JPanel {
         sendButton.addActionListener(e -> {
             String data = messageField.getText();
             if (!data.isEmpty()) {
-                this.parent.broadcast(ChatConstants.CONTENT_TEXT, data);
-                messageField.setText("");
-                addLine(this.parent.getUsername(), data);
+                if (data.startsWith("@msg")) {
+                    String[] maybeUnicast = data.split("@msg");
+                    if (maybeUnicast.length > 1) {
+                        String metadata = maybeUnicast[1].trim();
+                        System.out.println(metadata);
+                        int separator = metadata.indexOf(" ");
+                        if (separator != -1) {
+                            String name = metadata.substring(0, separator);
+                            String message = metadata.substring(separator + 1);
+                            this.parent.unicast(name, ChatConstants.CONTENT_TEXT, message);
+                            messageField.setText("");
+                            addLine(this.parent.getUsername(), message);
+                        }
+                    }
+                }
+                else {
+                    this.parent.broadcast(ChatConstants.CONTENT_TEXT, data);
+                    messageField.setText("");
+                    addLine(this.parent.getUsername(), data);
+                }
             }
         });
         add(sendButton);

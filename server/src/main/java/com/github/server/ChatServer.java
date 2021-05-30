@@ -43,35 +43,38 @@ public class ChatServer extends BaseServer implements IRequestHandler {
 
     public void handleRequest(UserThread user, ChatPacket request) {
         synchronized (this) {
-            JsonObject header = request.getHeader();
-            JsonElement commandElement = header.get(HEADER_COMMAND_PROPERTY);
-            if (commandElement != null) {
-                ChatCommand command = ChatCommand.valueOf(commandElement.getAsString());
-                switch (command) {
-                    case REGISTER:
-                        handleRegisterCommand(user, request);
-                        break;
-                    case LOGIN:
-                        handleLoginCommand(user, request);
-                        break;
-                    case LOGOUT:
-                        handleLogoutCommand(user);
-                        break;
-                    case UNICAST:
-                        handleUnicastCommand(user, request);
-                        break;
-                    case MULTICAST:
-                        handleMulticastCommand(user, request);
-                        break;
-                    case BROADCAST:
-                        handleBroadcastCommand(user, request);
-                        break;
-                    default:
-                        reply(user, ChatCommand.UNKNOWN, STATUS_ERROR, UNKNOWN_COMMAND_RESPONSE);
-                        break;
+            if (request != null) {
+                JsonObject header = request.getHeader();
+                JsonElement commandElement = header.get(HEADER_COMMAND_PROPERTY);
+                if (commandElement != null) {
+                    ChatCommand command = ChatCommand.valueOf(commandElement.getAsString());
+                    switch (command) {
+                        case REGISTER:
+                            handleRegisterCommand(user, request);
+                            break;
+                        case LOGIN:
+                            handleLoginCommand(user, request);
+                            break;
+                        case LOGOUT:
+                            handleLogoutCommand(user);
+                            break;
+                        case UNICAST:
+                            handleUnicastCommand(user, request);
+                            break;
+                        case MULTICAST:
+                            handleMulticastCommand(user, request);
+                            break;
+                        case BROADCAST:
+                            handleBroadcastCommand(user, request);
+                            break;
+                        default:
+                            reply(user, ChatCommand.UNKNOWN, STATUS_ERROR, UNKNOWN_COMMAND_RESPONSE);
+                            break;
+                    }
                 }
             }
         }
+
     }
 
     public void handleRegisterCommand(UserThread user, ChatPacket request) {
@@ -131,7 +134,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
 
         broadcast(user, header, payload);
 
-        user.disconnect();
+//        user.disconnect();
     }
 
     public void handleUnicastCommand(UserThread user, ChatPacket request) {
@@ -139,6 +142,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
         JsonElement targetElement = requestHeader.get(HEADER_TO_PROPERTY);
         if (targetElement != null) {
             String targetName = targetElement.getAsString();
+            JsonElement payloadTypeElement = requestHeader.get(HEADER_PAYLOAD_TYPE_PROPERTY);
             if (unicast(user, targetName, request.getPayload())) {
                 reply(user, ChatCommand.UNICAST, STATUS_OK, String.format(DIRECT_SUCCESS_MESSAGE, targetName));
             } else {
@@ -220,6 +224,7 @@ public class ChatServer extends BaseServer implements IRequestHandler {
             if (onlineUsers.get(target).equals(targetName)) {
                 JsonObject header = generateHeader(ChatCommand.UNICAST, payload.size());
                 header.addProperty(HEADER_FROM_PROPERTY, senderName);
+                header.addProperty(HEADER_PAYLOAD_TYPE_PROPERTY, PAYLOAD_TEXT);
                 send(target, header, payload);
                 return true;
             }
