@@ -392,7 +392,20 @@ public class MainFrame extends JFrame {
                     senderName = SERVER;
                 }
                 if (payloadType.equals(CONTENT_TEXT)) {
-                    chatPanel.addLine(senderName, payloadData);
+                    JsonElement commandElement = header.get(HEADER_COMMAND_PROPERTY);
+                    if (commandElement != null) {
+                        ChatCommand command = ChatCommand.valueOf(commandElement.getAsString());
+                        switch(command) {
+                            case UNICAST:
+                            case MULTICAST:
+                                chatPanel.addLine("From " + senderName, payloadData);
+                                break;
+                            case BROADCAST:
+                                chatPanel.addLine(senderName, payloadData);
+                                break;
+
+                        }
+                    }
                 }
                 else if (payloadType.equals(CONTENT_IMAGE)) {
 
